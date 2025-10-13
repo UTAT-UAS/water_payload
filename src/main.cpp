@@ -1,18 +1,25 @@
+#include "main.hpp"
 #include <Arduino.h>
+#include <ESP32Servo.h>
 
-// put function declarations here:
-int myFunction(int, int);
+Servo servo = Servo();
 
 void setup() {
   // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  Serial.begin(115200);
+  servo.attach(pin);
+  //servo.write(90); for writing angles
+  Serial.println("Ready");
+  servo.writeMicroseconds(us);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  if (Serial.available()) {
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+    us = input.toInt();
+    servo.write(us);
+  }
 }
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
-}
+// Tommy's PID code from last year: https://github.com/UTAT-UAS/ARCHIVE_hardware_integration/blob/main/packages/ros-payload-control/src/payload_control.cpp
