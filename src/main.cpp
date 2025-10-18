@@ -1,24 +1,29 @@
 #include "main.hpp"
+#include "pos_controller.hpp"
+#include "vel_controller.hpp"
 #include <Arduino.h>
 #include <ESP32Servo.h>
 
-Servo servo = Servo();
+PosController pcontroller = PosController(pin, lbound, ubound);
+VelController vcontroller = VelController(pin, lbound, ubound);
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  servo.attach(pin);
-  //servo.write(90); for writing angles
+  pcontroller.setup(center_us);
+  // vcontroller.setup(center_us);
+  // xTaskCreate(vcontroller.vIncrementTask, "vIncrementTask", 1024, NULL, 1, NULL);
   Serial.println("Ready");
-  servo.writeMicroseconds(us);
 }
 
 void loop() {
   if (Serial.available()) {
     String input = Serial.readStringUntil('\n');
-    input.trim();
-    us = input.toInt();
-    servo.write(us);
+    input.trim();  // Remove whitespace
+    double in_value = input.toDouble();
+    pcontroller.setUs((int) in_value, increment, period);
+    // vController.setRate(in_value, period);
+    Serial.println("Moved to: " + String(in_value));
   }
 }
 
