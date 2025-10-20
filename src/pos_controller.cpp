@@ -2,7 +2,7 @@
 
 PosController::PosController(int pin_, int lbound_, int ubound_)
     : pin(pin_), lbound(lbound_), ubound(ubound_) {
-    Servo servo = Servo();
+    servo = Servo();
     servo.attach(pin);
 }
 
@@ -14,6 +14,10 @@ void PosController::setup(int initial_us = 1000) {
 
 void PosController::setUs(int target_, int increment, int period) { // degrees per second, ms per step
     int target = constrain(target_, lbound, ubound);
+    if(increment == 0 || target == current_us) return;
+    if(target - current_us > 0 ^ increment > 0) {
+        increment = -increment;
+    }
 
     while (abs(current_us - target) > abs(increment)) {
       current_us += increment;

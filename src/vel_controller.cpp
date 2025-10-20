@@ -2,7 +2,7 @@
 
 VelController::VelController(int pin_, int lbound_, int ubound_)
     : pin(pin_), lbound(lbound_), ubound(ubound_) {
-    Servo servo = Servo();
+    servo = Servo();
     servo.attach(pin);
 }
 
@@ -16,12 +16,13 @@ void VelController::setRate(double increment_, int period_) {
     period = period_;
 }
 
-void VelController::vIncrementTask() {
+void VelController::vIncrementTask(void* parameters) {
+    VelController* self = static_cast<VelController*>(parameters);
     while(1) {
-        if (increment != 0) {
-            current_us = constrain(current_us + increment, lbound, ubound);
-            servo.writeMicroseconds((int) current_us);
+        if (self->increment != 0) {
+            self->current_us = constrain(self->current_us + self->increment, self->lbound, self->ubound);
+            self->servo.writeMicroseconds((int) self->current_us);
         }
-        vTaskDelay(pdMS_TO_TICKS(delay)); // what if period = 0?
+        vTaskDelay(pdMS_TO_TICKS(self->period)); // what if period = 0?
     }
 }

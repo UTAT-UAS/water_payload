@@ -5,14 +5,14 @@
 #include <ESP32Servo.h>
 
 PosController pcontroller = PosController(pin, lbound, ubound);
-VelController vcontroller = VelController(pin, lbound, ubound);
+//VelController vcontroller = VelController(pin, lbound, ubound);
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
   pcontroller.setup(center_us);
-  // vcontroller.setup(center_us);
-  // xTaskCreate(vcontroller.vIncrementTask, "vIncrementTask", 1024, NULL, 1, NULL);
+  //vcontroller.setup(center_us);
+  //xTaskCreate(VelController::vIncrementTask, "vIncrementTask", 1024, &vcontroller, 1, NULL);
   Serial.println("Ready");
 }
 
@@ -21,9 +21,10 @@ void loop() {
     String input = Serial.readStringUntil('\n');
     input.trim();  // Remove whitespace
     double in_value = input.toDouble();
+    Serial.println("Received: " + String(in_value));
     pcontroller.setUs((int) in_value, increment, period);
-    // vController.setRate(in_value, period);
-    Serial.println("Moved to: " + String(in_value));
+    //vcontroller.setRate(in_value, period);
+    Serial.println("Set to: " + String(in_value));
   }
 }
 
