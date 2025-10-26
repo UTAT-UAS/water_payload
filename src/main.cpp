@@ -22,7 +22,8 @@ void loop() {
     input.trim();  // Remove whitespace
     double in_value = input.toDouble();
     Serial.println("Received: " + String(in_value));
-    pcontroller.setUs((int) in_value, increment, period);
+    //pcontroller.setUs((int) in_value, increment, period);
+    pcontroller.setAngle(in_value, increment, period, servo_angle_param);
     //vcontroller.setRate(in_value, period);
     Serial.println("Set to: " + String(in_value));
   }

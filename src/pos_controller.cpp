@@ -7,7 +7,7 @@ PosController::PosController(int pin_, int lbound_, int ubound_)
 }
 
 // Method to set up the servo
-void PosController::setup(int initial_us = 1000) {
+void PosController::setup(int initial_us = 1465) {
     current_us = constrain(initial_us, lbound, ubound);
     servo.writeMicroseconds(current_us);
 }
@@ -26,4 +26,9 @@ void PosController::setUs(int target_, int increment, int period) { // degrees p
     }
     servo.writeMicroseconds(target);
     current_us = target;
+}
+
+void PosController::setAngle(double angle, int increment, int period, int servo_angle_param) {
+    double target = 1464.5 + angle * 1837 / (servo_angle_param * 1.25);
+    setUs(target, increment, period);
 }

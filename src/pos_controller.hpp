@@ -8,6 +8,7 @@ public:
     PosController(int pin_, int lbound_, int ubound_);
     void setup(int initial_us);
     void setUs(int target_, int increment, int period);
+    void setAngle(double angle, int increment, int period, int servo_angle_param);
 private:
     int pin;
     double current_us;
