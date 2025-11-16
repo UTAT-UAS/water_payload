@@ -6,6 +6,7 @@
 #include <ESP32Servo.h>
 #include <WiFi.h>
 #include <WebServer.h>
+#include <ESP32Servo.h>
 
 // Configuration - replace these with your network credentials if you want STA mode
 char WIFI_SSID[] = "YOUR_SSID";      // change to your WiFi SSID
@@ -59,6 +60,8 @@ const char index_html[] PROGMEM = R"rawliteral(
   </body>
 </html>
 )rawliteral";
+Servo Servoforangle;
+const int SERVO_PIN = 21; // use a suitable pin
 
 void handleSet(){
   IPAddress remote = server.client().remoteIP();
@@ -157,3 +160,4 @@ void setup(){
 void loop(){
   server.handleClient();
 }
+
