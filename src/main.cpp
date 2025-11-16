@@ -161,6 +161,35 @@ void setup(){
 
 void loop(){
   server.handleClient();
+   // Serial command: ServoRotating(number)
+  if (Serial.available()) {
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+
+    // Command must be like ServoRotating(<angle>)
+    if (input.startsWith("ServoRotating(") && input.endsWith(")")) {
+      int firstParen = input.indexOf('(');
+      int lastParen = input.lastIndexOf(')');
+      if (firstParen >= 0 && lastParen > firstParen) {
+        String angleStr = input.substring(firstParen + 1, lastParen);
+        angleStr.trim();
+        int angle = angleStr.toInt();
+        if (angle >= 0 && angle <= 180) {
+          Servoforangle.write(angle);
+          Serial.print("Servo angle set to ");
+          Serial.println(angle);
+        } else {
+          Serial.println("Invalid angle! Use 0 ~ 180.");
+        }
+      } else {
+        Serial.println("Invalid format. Use ServoRotating(angle)");
+      }
+    } else {
+      Serial.println("Unknown command. Use ServoRotating(angle)");
+    }
+  }
 }
+}
+
 
 
