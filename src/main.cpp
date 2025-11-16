@@ -27,41 +27,65 @@ const char index_html[] PROGMEM = R"rawliteral(
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ESP32S3 Pump Control</title>
-    <style> body { font-family: Arial, Helvetica, sans-serif; text-align:center; margin-top:30px;} input[type=number]{width:80px;font-size:1.1rem;padding:6px;} button{font-size:1.1rem;padding:8px 14px;margin-left:8px;} .state{margin-top:15px;font-weight:bold;} </style>
+    <title>ESP32S3 Pump & Servo Control</title>
+    <style> body { font-family: Arial, Helvetica, sans-serif; text-align:center; margin-top:30px;} input[type=number]{width:80px;font-size:1.1rem;padding:6px;} button{font-size:1.1rem;padding:8px 14px;margin:8px;} </style>
   </head>
   <body>
-    <h1>ESP32S3 Pump</h1>
+    <h1>ESP32S3 Pump & Servo Control</h1>
     <div>
-      <label for="speed">Speed (%)</label>
+      <label for="speed">Pump Speed (%)</label>
       <input id="speed" type="number" min="0" max="100" value="0">
-      <button onclick="send()">Set</button>
+      <button onclick="sendPump()">Set Pump</button>
     </div>
-    <div class="state" id="state">Speed: unknown</div>
+    <div class="state" id="state">Pump Speed: unknown</div>
+    <div style="margin-top:40px">
+      <label for="servo">Servo Angle (0-180)</label>
+      <input id="servo" type="number" min="0" max="180" value="90">
+      <button onclick="sendServo()">Set Servo</button>
+    </div>
+    <div id="servostate">Servo Angle: unknown</div>
     <script>
-      async function send(){
+      async function sendPump(){
         const v = document.getElementById('speed').value;
         await fetch('/set?speed=' + encodeURIComponent(v));
         updateState();
+      }
+      async function sendServo(){
+        const angle = document.getElementById('servo').value;
+        await fetch('/servo?angle=' + encodeURIComponent(angle));
+        updateServoState();
       }
       async function updateState(){
         try{
           const r = await fetch('/state');
           const j = await r.json();
-          document.getElementById('state').innerText = 'Speed: ' + j.speed + '%';
+          document.getElementById('state').innerText = 'Pump Speed: ' + j.speed + '%';
           document.getElementById('speed').value = j.speed;
         }catch(e){
-          document.getElementById('state').innerText = 'Speed: (no response)';
+          document.getElementById('state').innerText = 'Pump Speed: (no response)';
+        }
+      }
+      async function updateServoState(){
+        try{
+          const r = await fetch('/servo_state');
+          const j = await r.json();
+          document.getElementById('servostate').innerText = 'Servo Angle: ' + j.angle;
+          document.getElementById('servo').value = j.angle;
+        }catch(e){
+          document.getElementById('servostate').innerText = 'Servo Angle: (no response)';
         }
       }
       updateState();
+      updateServoState();
       setInterval(updateState, 2000);
+      setInterval(updateServoState, 2000);
     </script>
   </body>
 </html>
 )rawliteral";
 Servo Servoforangle;
 const int SERVO_PIN = 21; // use a suitable pin
+int servo_angle = 90;     // store last angle
 
 void handleSet(){
   IPAddress remote = server.client().remoteIP();
@@ -93,10 +117,35 @@ void handleState() {
   IPAddress remote = server.client().remoteIP();
   Serial.print("HTTP GET /state from "); Serial.println(remote);
   String payload = "{";
-  payload += "\"state\":";
-  payload += (led_state ? "true" : "false");
+  payload += "\"speed\":";
+  payload += "\"unknown\"";
   payload += "}";
   server.send(200, "application/json", payload);
+}
+
+void handleServo() {
+  IPAddress remote = server.client().remoteIP();
+  Serial.print("HTTP GET /servo from "); Serial.println(remote);
+  if (server.hasArg("angle")) {
+    String s = server.arg("angle");
+    int angle = s.toInt();
+    if (angle >= 0 && angle <= 180) {
+      Servoforangle.write(angle);
+      servo_angle = angle;
+      String reply = "{\"angle\":" + String(angle) + "}";
+      server.send(200, "application/json", reply);
+      Serial.print("Servo angle set to "); Serial.println(angle);
+    } else {
+      server.send(400, "text/plain", "Invalid angle. Use 0-180.");
+    }
+  } else {
+    server.send(400, "text/plain", "Missing 'angle' parameter");
+  }
+}
+
+void handleServoState() {
+  String reply = "{\"angle\":" + String(servo_angle) + "}";
+  server.send(200, "application/json", reply);
 }
 
 void handleNotFound(){
@@ -152,44 +201,19 @@ void setup(){
   server.on("/", HTTP_GET, handleRoot);
   server.on("/set", HTTP_GET, handleSet);
   server.on("/state", HTTP_GET, handleState);
+  server.on("/servo", HTTP_GET, handleServo);
+  server.on("/servo_state", HTTP_GET, handleServoState);
   server.begin();
 
   Serial.println("HTTP server started");
   Servoforangle.attach(SERVO_PIN);
-  Servoforangle.write(90); // default to center
+  Servoforangle.write(servo_angle); // default to center
 }
 
 void loop(){
   server.handleClient();
-   // Serial command: ServoRotating(number)
-  if (Serial.available()) {
-    String input = Serial.readStringUntil('\n');
-    input.trim();
+}
 
-    // Command must be like ServoRotating(<angle>)
-    if (input.startsWith("ServoRotating(") && input.endsWith(")")) {
-      int firstParen = input.indexOf('(');
-      int lastParen = input.lastIndexOf(')');
-      if (firstParen >= 0 && lastParen > firstParen) {
-        String angleStr = input.substring(firstParen + 1, lastParen);
-        angleStr.trim();
-        int angle = angleStr.toInt();
-        if (angle >= 0 && angle <= 180) {
-          Servoforangle.write(angle);
-          Serial.print("Servo angle set to ");
-          Serial.println(angle);
-        } else {
-          Serial.println("Invalid angle! Use 0 ~ 180.");
-        }
-      } else {
-        Serial.println("Invalid format. Use ServoRotating(angle)");
-      }
-    } else {
-      Serial.println("Unknown command. Use ServoRotating(angle)");
-    }
-  }
-}
-}
 
 
 
