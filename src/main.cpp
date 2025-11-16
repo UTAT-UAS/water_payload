@@ -155,9 +155,12 @@ void setup(){
   server.begin();
 
   Serial.println("HTTP server started");
+  Servoforangle.attach(SERVO_PIN);
+  Servoforangle.write(90); // default to center
 }
 
 void loop(){
   server.handleClient();
 }
+
 
