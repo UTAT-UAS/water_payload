@@ -61,9 +61,11 @@ void servo_callback(const void *msgin) {
 void setup() {
   Serial.begin(115200);
 
-  // Create queue and spawn servoTask
+  // spawn servoTask and pumpTask
   servo.setup(1465);
-  BaseType_t t = xTaskCreate(PosController::vMonitorTask, "servoTask", 4096, &servo, 1, NULL);
+  BaseType_t servoTask = xTaskCreate(PosController::vMonitorTask, "servoTask", 4096, &servo, 1, NULL);
+  actuators::pump::initPump();
+  BaseType_t pumpTask = xTaskCreate(actuators::pump::vMonitorTask, "pumpTask", 4096, NULL, 1, NULL);
 
   // Microros setup
   delay(500);
@@ -92,8 +94,6 @@ void setup() {
 
   pump_msg.data = 0;
   servo_msg.data = center_us;
-
-  actuators::pump::initPump();
 }
 
 void loop() {
