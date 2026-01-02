@@ -48,64 +48,22 @@ void pump_callback(const void *msgin) {
   actuators::pump::writeToPump(msg->data);
 }
 
-//PosController servo(41, 500, 2400); // pin, lbound, ubound should only respond to 546-2383
-static QueueHandle_t servoQueue;
-void servoTask(void *pv) {
-  const int servo_pin = 37;
-  const int servo_channel = 4;   // channels 0-3 (pump) use same hardware clock, 4-7 on another?
-  const int servo_freq = 50;      // Servos run at 50Hz
-  const int servo_resolution = 14;     // 14-bit servo_resolution (0 to 16383)
-
-  // Startup flash pattern
-  for(int i=0; i<3; i++) {
-      digitalWrite(DEBUG_LED, HIGH); vTaskDelay(pdMS_TO_TICKS(100));
-      digitalWrite(DEBUG_LED, LOW); vTaskDelay(pdMS_TO_TICKS(100));
-  }
-
-  // Servo setup with LEDC
-  ledcSetup(servo_channel, servo_freq, servo_resolution);
-  ledcAttachPin(servo_pin, servo_channel);
-
-  int us;
-
-  for (;;) {
-    if (xQueueReceive(servoQueue, &us, pdMS_TO_TICKS(100)) == pdTRUE) {
-      if (us >= lbound && us <= ubound) {
-        // Convert microseconds to duty cycle  (Target US / 20,000 Total Period US) * Max Resolution Ticks
-        uint32_t duty = (us * 16384) / 20000;
-        ledcWrite(servo_channel, duty);
-        
-        // Success blink
-        digitalWrite(DEBUG_LED, HIGH);
-        vTaskDelay(pdMS_TO_TICKS(100)); 
-        digitalWrite(DEBUG_LED, LOW);
-      }
-    }
-    // Yield to let the ESP32 manage background wifi/serial/watchdog
-    vTaskDelay(pdMS_TO_TICKS(1));
-  }
-}
+PosController servo(37, 4, 500, 2400); // pin, channel, lbound, ubound should only respond to 546-2383
+// channels 0-3 (pump) use same hardware clock, 4-7 on another?
 
 void servo_callback(const void *msgin) {
   const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *) msgin;
   int us = msg->data;
   
-  if (servoQueue) {
-    xQueueSend(servoQueue, &us, 0); 
-  }
+  servo.setUs(us);
 }
 
 void setup() {
   Serial.begin(115200);
 
-  pinMode(DEBUG_LED, OUTPUT);
-
   // Create queue and spawn servoTask
-  servoQueue = xQueueCreate(8, sizeof(int));
-  if (!servoQueue) {
-    error_loop();
-  }
-  BaseType_t t = xTaskCreate(servoTask, "servoTask", 4096, NULL, 1, NULL);
+  servo.setup(1465);
+  BaseType_t t = xTaskCreate(PosController::vMonitorTask, "servoTask", 4096, &servo, 1, NULL);
 
   // Microros setup
   delay(500);

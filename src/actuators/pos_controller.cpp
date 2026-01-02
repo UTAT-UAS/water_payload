@@ -1,34 +1,45 @@
 #include "pos_controller.hpp"
 
-PosController::PosController(int pin_, int lbound_, int ubound_)
-    : pin(pin_), lbound(lbound_), ubound(ubound_) {
-    servo = Servo();
-    servo.attach(pin);
+PosController::PosController(int pin_, int channel_, int lbound_, int ubound_)
+    : pin(pin_), channel(channel_), lbound(lbound_), ubound(ubound_) {
+    freq = 50;      // Servos run at 50Hz
+    resolution = 14;     // 14-bit resolution (0 to 16383)
 }
 
 // Method to set up the servo
 void PosController::setup(int initial_us = 1465) {
-    current_us = constrain(initial_us, lbound, ubound);
-    servo.writeMicroseconds(current_us);
+    duty = constrain(initial_us, lbound, ubound);
+    servoQueue = xQueueCreate(8, sizeof(int));
+
+    // Servo setup with LEDC
+    ledcSetup(channel, freq, resolution);
+    ledcAttachPin(pin, channel);
 }
 
-void PosController::setUs(int target_, int increment, int period) { // degrees per second, ms per step
+void PosController::setUs(int target_) { // degrees per second, ms per step
     int target = constrain(target_, lbound, ubound);
-    if(increment == 0 || target == current_us) return;
-    if(target - current_us > 0 ^ increment > 0) {
-        increment = -increment;
-    }
+    if(target == duty) return;
 
-    while (abs(current_us - target) > abs(increment)) {
-      current_us += increment;
-      servo.writeMicroseconds((int) current_us);
-      delay(period);
+    if (servoQueue) {
+        // Convert microseconds to duty cycle  (Target US / 20,000 Total Period US) * Max Resolution Ticks
+        duty = (target * 16384) / 20000;
+        xQueueSend(servoQueue, &duty, 0);
     }
-    servo.writeMicroseconds(target);
-    current_us = target;
 }
 
-void PosController::setAngle(double angle, int increment, int period, int servo_angle_param) {
+void PosController::setAngle(double angle, int servo_angle_param) {
     double target = 1464.5 + angle * 1837 / (servo_angle_param * 1.25);
-    setUs(target, increment, period);
+    setUs(target);
+}
+
+void PosController::vMonitorTask(void *pv) {
+    PosController* self = static_cast<PosController*>(pv);
+    uint32_t duty_local;
+    while(1) {
+        if (xQueueReceive(self->servoQueue, &duty_local, pdMS_TO_TICKS(100)) == pdTRUE) {
+            ledcWrite(self->channel, duty_local);
+        }
+        // Yield to let the ESP32 manage background wifi/serial/watchdog
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
 }
