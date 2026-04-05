@@ -48,7 +48,7 @@ void pump_callback(const void *msgin) {
   actuators::pump::writeToPump(msg->data);
 }
 
-PosController servo(37, 4, 500, 2400); // pin, channel, lbound, ubound should only respond to 546-2383
+PosController servo(14, 4, 546, 2383); // pin, channel, lbound, ubound should only respond to 546-2383
 // channels 0-3 (pump) use same hardware clock, 4-7 on another?
 
 void servo_callback(const void *msgin) {
@@ -72,7 +72,14 @@ void setup() {
   set_microros_serial_transports(Serial);
   delay(2000);
   allocator = rcl_get_default_allocator();
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+
+  // Blinking loop on startup to search for microros agent
+  while (rclc_support_init(&support, 0, NULL, &allocator) != RCL_RET_OK) {
+    digitalWrite(DEBUG_LED, !digitalRead(DEBUG_LED));
+    delay(500); 
+  }
+  digitalWrite(DEBUG_LED, LOW);
+
   RCCHECK(rclc_node_init_default(&node, "micro_ros_water_payload_node", "", &support));
 
   // Create publishers

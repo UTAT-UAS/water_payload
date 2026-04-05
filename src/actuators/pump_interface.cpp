@@ -3,7 +3,7 @@
 
 namespace actuators::pump {
 
-    const int pwmPin = 35;     // pin 5
+    const int pwmPin = 21;     // pin 21
     const int pwmChannel = 0; // PWM channel 0-15
     const int freq = 5000;    // 5000Hz
     const int resolution = 8; // 8-bit (0–255)

@@ -28,7 +28,7 @@ void PosController::setUs(int target_) { // degrees per second, ms per step
 }
 
 void PosController::setAngle(double angle, int servo_angle_param) {
-    double target = 1464.5 + angle * 1837 / (servo_angle_param * 1.25);
+    double target = center_us + angle * 1837 / (servo_angle_param * 1.25);
     setUs(target);
 }
 

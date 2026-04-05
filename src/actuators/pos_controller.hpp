@@ -18,6 +18,7 @@ private:
     uint32_t duty;
     int lbound; // lower bound in microseconds
     int ubound; // upper bound in microseconds
+    float center_us = 1464.5;
     QueueHandle_t servoQueue;
 };
 
