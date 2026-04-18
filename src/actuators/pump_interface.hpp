@@ -4,6 +4,6 @@ namespace actuators::pump {
 
     void initPump();
     void writeToPump(int speed);  // speed: 0-100
-
+    void vMonitorTask(void *pv);
 }
 
